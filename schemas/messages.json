@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://onyx.jpmorgan.com/schemas/messages.json",
+  "title": "JPM Onyx WebSocket Protocol",
+  "description": "Wire protocol between React clients and the Onyx sequencer",
+  "$defs": {
+    "Side":        { "type": "string", "enum": ["buy", "sell"] },
+    "OrderKind":   { "type": "string", "enum": ["market", "limit", "stop", "stop-limit"] },
+    "Tif":         { "type": "string", "enum": ["GTC", "IOC", "FOK"] },
+    "OrderStatus": { "type": "string", "enum": ["pending", "resting", "partial", "filled", "cancelled", "rejected"] },
+    "LEI": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{18}[0-9]{2}$",
+      "description": "ISO 17442 Legal Entity Identifier"
+    },
+    "Level": {
+      "type": "object",
+      "required": ["price", "size"],
+      "properties": {
+        "price": { "type": "number", "exclusiveMinimum": 0 },
+        "size":  { "type": "number", "minimum": 0 }
+      }
+    },
+    "Book": {
+      "type": "object",
+      "required": ["bids", "asks", "seq", "ts_ms"],
+      "properties": {
+        "bids":  { "type": "array", "items": { "$ref": "#/$defs/Level" } },
+        "asks":  { "type": "array", "items": { "$ref": "#/$defs/Level" } },
+        "seq":   { "type": "integer", "minimum": 0 },
+        "ts_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "FillEvent": {
+      "type": "object",
+      "required": ["fill_id", "price", "size", "fee", "is_maker", "counterparty_lei", "ts_ns", "tx_hash"],
+      "properties": {
+        "fill_id":          { "type": "string" },
+        "price":            { "type": "number" },
+        "size":             { "type": "number" },
+        "fee":              { "type": "number" },
+        "is_maker":         { "type": "boolean" },
+        "counterparty_lei": { "$ref": "#/$defs/LEI" },
+        "ts_ns":            { "type": "integer" },
+        "tx_hash":          { "type": "string", "pattern": "^0x[a-f0-9]{64}$" }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "AuthRequest",
+      "type": "object",
+      "required": ["op", "lei", "desk", "signed_nonce"],
+      "properties": {
+        "op":           { "const": "auth" },
+        "lei":          { "$ref": "#/$defs/LEI" },
+        "desk":         { "type": "string", "pattern": "^[A-Z]+-[0-9]+$" },
+        "signed_nonce": { "type": "string" }
+      }
+    },
+    {
+      "title": "SubRequest",
+      "type": "object",
+      "required": ["op", "channel", "symbol"],
+      "properties": {
+        "op":      { "enum": ["sub", "unsub"] },
+        "channel": { "enum": ["book", "trades", "ticker", "chain", "positions", "orders"] },
+        "symbol":  { "type": "string" }
+      }
+    },
+    {
+      "title": "PlaceOrderRequest",
+      "type": "object",
+      "required": ["op", "client_oid", "symbol", "side", "type", "size", "leverage", "tif", "reduce_only", "post_only"],
+      "properties": {
+        "op":          { "const": "place_order" },
+        "client_oid":  { "type": "string", "minLength": 1, "maxLength": 64 },
+        "symbol":      { "type": "string" },
+        "side":        { "$ref": "#/$defs/Side" },
+        "type":        { "$ref": "#/$defs/OrderKind" },
+        "price":       { "type": "number", "exclusiveMinimum": 0 },
+        "stop_price":  { "type": "number", "exclusiveMinimum": 0 },
+        "size":        { "type": "number", "exclusiveMinimum": 0 },
+        "leverage":    { "type": "integer", "minimum": 1, "maximum": 50 },
+        "tif":         { "$ref": "#/$defs/Tif" },
+        "reduce_only": { "type": "boolean" },
+        "post_only":   { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "limit" } } },
+          "then": { "required": ["price"] }
+        },
+        {
+          "if": { "properties": { "type": { "enum": ["stop", "stop-limit"] } } },
+          "then": { "required": ["stop_price"] }
+        }
+      ]
+    },
+    {
+      "title": "CancelOrderRequest",
+      "type": "object",
+      "required": ["op", "order_id", "client_oid"],
+      "properties": {
+        "op":         { "const": "cancel_order" },
+        "order_id":   { "type": "string" },
+        "client_oid": { "type": "string" }
+      }
+    },
+    {
+      "title": "PingRequest",
+      "type": "object",
+      "required": ["op", "ts_ms"],
+      "properties": {
+        "op":    { "const": "ping" },
+        "ts_ms": { "type": "integer" }
+      }
+    },
+    {
+      "title": "OrderAck",
+      "type": "object",
+      "required": ["op", "client_oid", "order_id", "seq", "ts_ns", "symbol", "status", "latency_us"],
+      "properties": {
+        "op":         { "const": "order_ack" },
+        "client_oid": { "type": "string" },
+        "order_id":   { "type": "string" },
+        "seq":        { "type": "integer" },
+        "ts_ns":      { "type": "integer" },
+        "symbol":     { "type": "string" },
+        "status":     { "$ref": "#/$defs/OrderStatus" },
+        "latency_us": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "OrderFinal",
+      "type": "object",
+      "required": ["op", "client_oid", "order_id", "block_height", "chain_id", "fills"],
+      "properties": {
+        "op":           { "const": "order_final" },
+        "client_oid":   { "type": "string" },
+        "order_id":     { "type": "string" },
+        "block_height": { "type": "integer" },
+        "chain_id":     { "type": "integer", "minimum": 0, "maximum": 19 },
+        "fills":        { "type": "array", "items": { "$ref": "#/$defs/FillEvent" } }
+      }
+    },
+    {
+      "title": "OrderReject",
+      "type": "object",
+      "required": ["op", "client_oid", "reason", "code"],
+      "properties": {
+        "op":         { "const": "order_reject" },
+        "client_oid": { "type": "string" },
+        "reason":     { "type": "string" },
+        "code":       { "type": "integer" }
+      }
+    },
+    {
+      "title": "BookSnapshot",
+      "type": "object",
+      "required": ["op", "channel", "symbol", "book"],
+      "properties": {
+        "op":      { "const": "book_snapshot" },
+        "channel": { "const": "book" },
+        "symbol":  { "type": "string" },
+        "book":    { "$ref": "#/$defs/Book" }
+      }
+    },
+    {
+      "title": "BookDelta",
+      "type": "object",
+      "required": ["op", "channel", "symbol", "bids", "asks", "seq"],
+      "properties": {
+        "op":      { "const": "book_delta" },
+        "channel": { "const": "book" },
+        "symbol":  { "type": "string" },
+        "bids":    { "type": "array", "items": { "$ref": "#/$defs/Level" } },
+        "asks":    { "type": "array", "items": { "$ref": "#/$defs/Level" } },
+        "seq":     { "type": "integer" }
+      }
+    },
+    {
+      "title": "Trade",
+      "type": "object",
+      "required": ["op", "channel", "symbol", "price", "size", "side", "taker_lei", "maker_lei", "ts_ms"],
+      "properties": {
+        "op":        { "const": "trade" },
+        "channel":   { "const": "trades" },
+        "symbol":    { "type": "string" },
+        "price":     { "type": "number" },
+        "size":      { "type": "number" },
+        "side":      { "$ref": "#/$defs/Side" },
+        "taker_lei": { "$ref": "#/$defs/LEI" },
+        "maker_lei": { "$ref": "#/$defs/LEI" },
+        "ts_ms":     { "type": "integer" },
+        "tx_hash":   { "type": "string", "pattern": "^0x[a-f0-9]{64}$" }
+      }
+    },
+    {
+      "title": "Ticker",
+      "type": "object",
+      "required": ["op", "channel", "symbol", "mark", "index", "last", "change_24h", "volume_24h", "open_interest"],
+      "properties": {
+        "op":            { "const": "ticker" },
+        "channel":       { "const": "ticker" },
+        "symbol":        { "type": "string" },
+        "mark":          { "type": "number" },
+        "index":         { "type": "number" },
+        "last":          { "type": "number" },
+        "change_24h":    { "type": "number" },
+        "volume_24h":    { "type": "number" },
+        "funding_8h":    { "type": "number" },
+        "open_interest": { "type": "number" }
+      }
+    },
+    {
+      "title": "ChainEvent",
+      "type": "object",
+      "required": ["op", "channel", "kind", "seq", "chain_id", "detail"],
+      "properties": {
+        "op":             { "const": "chain_event" },
+        "channel":        { "const": "chain" },
+        "kind":           { "enum": ["block", "finality", "margin", "settle", "compliance"] },
+        "seq":            { "type": "integer" },
+        "chain_id":       { "type": "integer", "minimum": 0, "maximum": 19 },
+        "detail":         { "type": "string" },
+        "bft_latency_ms": { "type": "number" }
+      }
+    }
+  ]
+}

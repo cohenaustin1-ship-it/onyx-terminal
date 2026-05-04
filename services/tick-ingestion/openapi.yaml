@@ -1,0 +1,100 @@
+openapi: 3.0.3
+info:
+  title: Onyx Tick Ingestion API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8001
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Tick:
+      type: object
+      properties:
+        ts:     { type: integer, description: ms since epoch }
+        price:  { type: number }
+        size:   { type: number }
+        side:   { type: string, nullable: true, enum: [buy, sell, null] }
+        source: { type: string, enum: [coinbase, hyperliquid, polygon] }
+    OHLCBar:
+      type: object
+      properties:
+        ts:         { type: integer }
+        open:       { type: number }
+        high:       { type: number }
+        low:        { type: number }
+        close:      { type: number }
+        volume:     { type: number }
+        tick_count: { type: integer }
+
+paths:
+  /health:
+    get:
+      summary: Service health + per-source connection state
+      security: []
+      responses:
+        "200": { description: OK }
+  /data/{symbol}:
+    get:
+      summary: Recent raw ticks for a symbol
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: symbol, in: path, required: true, schema: { type: string } }
+        - { name: limit,  in: query, schema: { type: integer, minimum: 1, maximum: 10000, default: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbol: { type: string }
+                  count:  { type: integer }
+                  data:   { type: array, items: { $ref: "#/components/schemas/Tick" } }
+  /ohlc/{symbol}:
+    get:
+      summary: Aggregated OHLC bars for a symbol+interval
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: symbol,   in: path,  required: true, schema: { type: string } }
+        - { name: interval, in: query, schema: { type: string, enum: [1m, 5m, 15m, 1h, 4h, 1d], default: 1m } }
+        - { name: limit,    in: query, schema: { type: integer, default: 200 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbol:   { type: string }
+                  interval: { type: string }
+                  bars:     { type: array, items: { $ref: "#/components/schemas/OHLCBar" } }
+  /latest/{symbol}:
+    get:
+      summary: Last-known price
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: symbol, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+        "404": { description: Symbol not seen }
+  /symbols:
+    get:
+      summary: All symbols with at least one tick recorded
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /stream/{symbol}:
+    get:
+      summary: WebSocket — live tick fan-out (auth via ?token= query param)
+      security: []
+      parameters:
+        - { name: symbol, in: path, required: true, schema: { type: string } }
+        - { name: token,  in: query, required: true, schema: { type: string } }
+      responses:
+        "101": { description: Switching protocols (WebSocket) }

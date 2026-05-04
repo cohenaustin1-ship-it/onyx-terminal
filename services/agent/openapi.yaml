@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: Onyx Agent (ZeroClaw-style)
+  version: 0.1.0
+servers:
+  - url: http://localhost:7777
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+paths:
+  /health: { get: { security: [], responses: { "200": { description: OK } } } }
+  /agent/chat:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: LLM chat with provider fallback chain
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messages]
+              properties:
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    properties: { role: { type: string, enum: [user, assistant, system] }, content: { type: string } }
+                model:      { type: string }
+                system:     { type: string }
+                max_tokens: { type: integer }
+                user_id:    { type: string, description: persist conversation under this id }
+                use_tools:  { type: boolean }
+      responses:
+        "200":
+          description: LLM response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  provider: { type: string }
+                  model:    { type: string }
+                  content:  { type: string }
+  /agent/tool:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Direct tool invocation (bypasses LLM)
+      requestBody:
+        content:
+          application/json: { schema: { type: object, properties: { name: { type: string }, input: { type: object } } } }
+      responses: { "200": { description: Tool result } }
+  /agent/tools:
+    get: { security: [{ bearerAuth: [] }], responses: { "200": { description: Tool specs } } }
+  /users/{userId}:
+    get: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+    patch: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /users/{userId}/prefs:
+    get: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+    patch: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /users/{userId}/history:
+    get: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /channels/telegram/register:
+    post: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /channels/status:
+    get: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /channels/web/stream:
+    get:
+      summary: SSE event stream — auth via ?token=&user_id=
+      security: []
+      responses: { "200": { description: SSE stream } }
+  /notify:
+    post: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }

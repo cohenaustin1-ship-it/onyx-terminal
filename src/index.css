@@ -1,0 +1,633 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* Theme-driven CSS variables. JS in JPMOnyxTerminal.jsx overrides
+     --onyx-bg/--onyx-surface etc on document.documentElement when the
+     user switches themes (rose, light, dark). We default to the dark
+     theme values; light/rose themes set their own. */
+  --onyx-bg:        #16191E;
+  --onyx-surface:   #1B1F26;
+  --onyx-surface2:  #22272F;
+  --onyx-text:      #F0F3FA;
+  --onyx-text-dim:  #8A93A6;
+  --onyx-text-mute: #5A6274;
+  --onyx-mint:      #3D7BFF;
+  --onyx-mint-dim:  #2C5FCC;
+  --onyx-green:     #1FB26B;
+  --onyx-red:       #ED7088;
+  --onyx-border:    rgba(255,255,255,0.06);
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  /* Use the CSS var so theme changes flip the body bg.
+     Falls back to dark charcoal if var is unset. */
+  background: var(--onyx-bg, #16191E);
+  color: var(--onyx-text, #F0F3FA);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-feature-settings: "tnum", "ss01", "cv01";
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  /* Smooth bg transition when user toggles themes */
+  transition: background 200ms ease, color 200ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Tabular numerals for any input/button/table number — columns of figures
+   align perfectly and digits don't shift width as values change. */
+input,
+button,
+table,
+table td,
+table th,
+[class*="tabular-nums"] {
+  font-feature-settings: "tnum", "ss01";
+}
+
+.font-mono,
+input[type="text"] {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-feature-settings: "tnum";
+}
+
+/* Refined narrower scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--onyx-surface2, #2A2F38);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3A4050;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--onyx-surface2, #22272F);
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--onyx-mint, #3D7BFF);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--onyx-mint, #3D7BFF);
+  cursor: pointer;
+  border: none;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--onyx-mint, #3D7BFF);
+}
+
+/* Section header utility class — Bloomberg-style all-caps tracked labels */
+.imo-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--onyx-text-mute, #8A93A6);
+}
+
+/* Subtle column hover highlight for data tables */
+.imo-data-table tbody tr {
+  transition: background 100ms ease;
+}
+.imo-data-table tbody tr:hover {
+  background: rgba(255,255,255,0.04);
+}
+/* Bloomberg-style table — every <td> with a class that contains "num" gets
+   right-aligned and tabular-num automatically. Pairs with the .imo-num
+   utility but also catches inline tabular-nums classes that were used
+   before the utility was introduced. */
+.imo-data-table td.imo-num,
+.imo-data-table th.imo-num {
+  text-align: right;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+.imo-data-table td.imo-label,
+.imo-data-table th.imo-label {
+  text-align: left;
+}
+
+/* Table number / label alignment utilities */
+.imo-num {
+  text-align: right;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+.imo-label {
+  text-align: left;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   RESPONSIVE BEHAVIOR
+   ───────────────────
+   The app is densely packed and was designed for desktop monitors. Below
+   1280px we tighten paddings and shrink the page nav. Below 900px we drop
+   the page-nav text labels (icons only via aria-labels). Below 700px we
+   collapse the right-side sidebar widgets stacked under the chart.
+   ────────────────────────────────────────────────────────────────────── */
+
+/* Tablet — preserve all features but condense */
+@media (max-width: 1280px) {
+  body {
+    font-size: 13px;
+  }
+}
+
+/* Small tablet / large phone — drop the value tile in top nav,
+   reduce padding around the trade-page mesh */
+@media (max-width: 1024px) {
+  .imo-section-label {
+    font-size: 9px;
+    letter-spacing: 1.2px;
+  }
+}
+
+/* Phone — show the responsive scrollable layout, hide non-essential
+   ornamentation. Page nav becomes scrollable horizontal strip. */
+@media (max-width: 720px) {
+  body {
+    font-size: 12px;
+  }
+  /* Keep horizontal scroll when content can't fit, instead of overflowing */
+  html, body {
+    min-width: 320px;
+    overflow-x: auto;
+  }
+  /* Reduce all .p-4 / .p-5 paddings on the trade page mesh */
+  .imo-glass-widget {
+    border-radius: 10px !important;
+  }
+}
+
+/* Allow the trade-page mesh to stack vertically on narrow viewports */
+@media (max-width: 900px) {
+  /* The mesh inside .flex-1.min-h-0.relative.grid uses inline grid styles —
+     a CSS rule alone can't override inline styles. Instead we just tighten
+     the gap so widgets get more room */
+  .imo-glass-widget {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18) !important;
+  }
+}
+
+/* Charts inside Recharts ResponsiveContainer reflow automatically. */
+
+/* Analyze chart loading bar — looping fill animation */
+@keyframes imo-loading-bar {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(80%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Daily brief toast — slide in from the right with a subtle fade */
+@keyframes imo-brief-slide-in {
+  0%   { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* AvatarMini — pulse animation when AI is processing */
+@keyframes imo-avatar-pulse-anim {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+.imo-avatar-pulse {
+  animation: imo-avatar-pulse-anim 1.2s ease-in-out infinite;
+}
+
+/* Typing dots indicator */
+.imo-typing-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 0;
+}
+.imo-typing-dots > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: imo-typing-bounce 1.2s ease-in-out infinite;
+}
+.imo-typing-dots > span:nth-child(2) { animation-delay: 0.15s; }
+.imo-typing-dots > span:nth-child(3) { animation-delay: 0.30s; }
+@keyframes imo-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.4; }
+  30%           { transform: translateY(-4px); opacity: 1;   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Cross-page pill/card border quality pass.
+   Applies to all pages except the Trade workspace (which manages its
+   own widget chrome). The selectors target common Tailwind class
+   combinations used for cards and pills throughout Portfolio, Budget,
+   Predictions, Discuss, etc.
+   - Slightly thicker, more visible border (was 6% opacity → 10%)
+   - Subtle inner highlight on top edge
+   - Small drop shadow so cards lift off the bg
+   ────────────────────────────────────────────────────────────────────── */
+.imo-page-area .rounded-md.border,
+.imo-page-area .rounded-lg.border,
+.imo-page-area .rounded-xl.border {
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Pills inside non-trade pages — slightly more pronounced borders */
+.imo-page-area button.rounded-md,
+.imo-page-area button.rounded-lg,
+.imo-page-area button.rounded-full {
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+/* Thin scrollbar utility — used on predictions trending strip and other
+   horizontal scrollers where the default scrollbar is too chunky. */
+.imo-thin-scrollbar {
+  scrollbar-width: thin;
+}
+.imo-thin-scrollbar::-webkit-scrollbar {
+  height: 3px;
+  width: 3px;
+}
+.imo-thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.imo-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+}
+.imo-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.20);
+}
+
+/* ─── Theme switcher overrides ───
+   The app uses inline color styles tied to a `COLORS` constant. To keep
+   the change minimal, theme switching applies a body-level filter +
+   targeted CSS variable shifts. Not a full theme rewrite (that would
+   require refactoring 40k lines of inline styles), but enough to give
+   the user a meaningful visual change. */
+
+/* Light mode — invert the dark base + filter back to color-correct.
+   This is a deliberately simple approach: it flips dark UI to light by
+   inverting all colors and re-inverting hue, which keeps brand colors
+   intact while making the canvas light. */
+body[data-theme="light"] {
+  background: #F4F5F8 !important;
+}
+body[data-theme="light"] > #root {
+  filter: invert(0.92) hue-rotate(180deg);
+  background: #F4F5F8;
+}
+/* Re-invert images, charts, and the imo-glass widgets so they don't
+   look weird in light mode. */
+body[data-theme="light"] img,
+body[data-theme="light"] svg image,
+body[data-theme="light"] video,
+body[data-theme="light"] canvas {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Rose mode — adds a warm magenta tint on top of the dark palette.
+   The hue-rotate shifts navy accents toward rose pink without flipping
+   the canvas to light. */
+body[data-theme="rose"] > #root {
+  filter: hue-rotate(280deg) saturate(0.85) brightness(0.95);
+}
+body[data-theme="rose"] img,
+body[data-theme="rose"] svg image,
+body[data-theme="rose"] video {
+  filter: hue-rotate(-280deg) saturate(1.18) brightness(1.05);
+}
+
+/* ─── Theme-picker truecolor zone ───
+   The settings page theme picker swatches need to render in their
+   declared RGB so users see an honest preview of each theme. Without
+   this, swatches sit inside the body filter and the "Dark" swatch
+   appears light when in light mode, "Light" swatch appears dark, etc.
+   This class applies a counter-filter on the swatch so its rendered
+   output approximates its declared RGB regardless of which theme is
+   active. The math isn't pixel-perfect (CSS filter composition is
+   approximate) but the result is recognizable: dark swatches read
+   dark, light swatches read light, rose swatches keep their pink. */
+body[data-theme="light"] .imo-truecolor {
+  filter: invert(1) hue-rotate(180deg);
+}
+body[data-theme="rose"] .imo-truecolor {
+  filter: hue-rotate(-280deg) saturate(1.18) brightness(1.05);
+}
+
+/* Dark stays default (no override needed). */
+
+/* ─── Streamdown / AIMarkdown styling ───
+   Streamdown emits semantic HTML (p, ul, ol, h1-h6, code, pre, table,
+   blockquote, strong, em). Onyx doesn't ship Tailwind's prose plugin,
+   so we hand-tune the rhythm here. Goals: tight vertical spacing
+   (these surfaces are small), brand-mint accents on emphasis and
+   links, monospace + subtle bg on code, no horizontal scroll on
+   tables (we let them wrap or scroll their own container instead). */
+.imo-ai-md > * {
+  margin: 0;
+}
+.imo-ai-md > * + * {
+  margin-top: 0.55em;
+}
+.imo-ai-md p {
+  margin: 0;
+}
+.imo-ai-md strong, .imo-ai-md b {
+  font-weight: 600;
+  color: #DDE3EC;
+}
+.imo-ai-md em, .imo-ai-md i {
+  font-style: italic;
+  color: #B6BDC9;
+}
+.imo-ai-md a {
+  color: #3D7BFF;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(61,123,255,0.4);
+}
+.imo-ai-md a:hover {
+  text-decoration-color: #3D7BFF;
+}
+.imo-ai-md ul, .imo-ai-md ol {
+  padding-left: 1.1em;
+  margin: 0.4em 0;
+}
+.imo-ai-md ul {
+  list-style: disc;
+}
+.imo-ai-md ol {
+  list-style: decimal;
+}
+.imo-ai-md li {
+  margin: 0.2em 0;
+}
+.imo-ai-md li > p {
+  margin: 0;
+}
+.imo-ai-md h1, .imo-ai-md h2, .imo-ai-md h3, .imo-ai-md h4, .imo-ai-md h5 {
+  font-weight: 600;
+  color: #E6EAF0;
+  line-height: 1.25;
+  margin: 0.7em 0 0.3em 0;
+}
+.imo-ai-md h1 { font-size: 1.25em; }
+.imo-ai-md h2 { font-size: 1.15em; }
+.imo-ai-md h3 { font-size: 1.05em; }
+.imo-ai-md h4, .imo-ai-md h5 { font-size: 1em; }
+.imo-ai-md code {
+  font-family: 'ui-monospace', 'SF Mono', Consolas, monospace;
+  font-size: 0.92em;
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  color: #B6BDC9;
+}
+.imo-ai-md pre {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  font-size: 0.92em;
+  line-height: 1.5;
+  margin: 0.5em 0;
+}
+.imo-ai-md pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.imo-ai-md blockquote {
+  border-left: 2px solid #3D7BFF;
+  padding-left: 0.8em;
+  color: #B6BDC9;
+  margin: 0.5em 0;
+}
+.imo-ai-md hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  margin: 0.7em 0;
+}
+.imo-ai-md table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95em;
+  margin: 0.5em 0;
+}
+.imo-ai-md th, .imo-ai-md td {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 4px 8px;
+  text-align: left;
+}
+.imo-ai-md th {
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+  color: #DDE3EC;
+}
+.imo-ai-md img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.imo-ai-md > div[data-streamdown-block] {
+  /* Streamdown wraps each block in a div for incremental updates;
+     reset its default margins so our prose rhythm above wins. */
+  margin: 0;
+}
+
+/* Pulse animation — used by MicButton when actively listening so the
+   button visually indicates the live recording state. Subtle scale +
+   opacity wave; never grows beyond the parent layout. */
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(237, 112, 136, 0.4); }
+  50%      { box-shadow: 0 0 0 4px rgba(237, 112, 136, 0); }
+}
+
+/* imo-no-scrollbar — hide the native scrollbar entirely while keeping
+   scroll behavior intact. Used by ScrollableRowWithProgress which
+   substitutes a custom progress rail underneath. */
+.imo-no-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.imo-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* Phase 3o.87 polish — shimmer animation for LoadingSkeleton placeholders.
+   Used to indicate data-loading state with a subtle moving gradient
+   across the placeholder shapes. Designed to feel "active but not
+   urgent" — slow enough to not be visually distracting. */
+@keyframes imo-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Phase 3o.87 polish — print stylesheet. Hides chrome (top nav,
+   bottom panel, AI sidebar, minimized dock, modals) and maximizes
+   content surface. Applies to all pages but is most useful on the
+   Risk page where users may want to print PDF reports for sharing
+   with clients, advisors, or compliance.
+   
+   The print path:
+     1. User clicks "Print risk report" button (or browser Print menu)
+     2. @media print rules below take over
+     3. Content panels render in a single column at print width
+     4. Each panel breaks cleanly across pages where possible
+     5. Background colors are simplified to ink-friendly tones */
+@media print {
+  /* Hide app chrome — none of these belong in a print-out */
+  .imo-no-print,
+  nav,
+  [role="navigation"],
+  [role="banner"],
+  .top-nav,
+  .bottom-panel,
+  .ai-sidebar,
+  .minimized-dock,
+  .command-palette,
+  .keyboard-overlay,
+  button {
+    display: none !important;
+  }
+  /* Force light-on-white for ink savings */
+  body, html, #root, .imo-print-target {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  /* Panel backgrounds → white; subtle borders → solid grey */
+  .imo-print-target .rounded-md,
+  .imo-print-target [class*="border"] {
+    background: #ffffff !important;
+    border-color: #cccccc !important;
+    color: #222222 !important;
+    page-break-inside: avoid;
+  }
+  /* Tables: ensure full width and avoid splitting rows badly */
+  .imo-print-target table {
+    width: 100% !important;
+    border-collapse: collapse;
+  }
+  .imo-print-target table th,
+  .imo-print-target table td {
+    color: #222 !important;
+    border-color: #cccccc !important;
+    padding: 4px 6px;
+  }
+  .imo-print-target table thead {
+    display: table-header-group;
+  }
+  .imo-print-target tr {
+    page-break-inside: avoid;
+  }
+  /* Reset any dark-themed text colors to printable values */
+  .imo-print-target [style*="color: rgb(31, 178, 107)"],
+  .imo-print-target [style*="color: #1FB26B"] { color: #2E7D32 !important; }
+  .imo-print-target [style*="color: rgb(237, 112, 136)"],
+  .imo-print-target [style*="color: #ED7088"] { color: #B71C1C !important; }
+  /* Shimmer animations — freeze, since print is static */
+  .imo-print-target * {
+    animation: none !important;
+    transition: none !important;
+  }
+  /* Add a subtle page break before each top-level panel for readability */
+  .imo-print-target > .imo-print-page-break {
+    page-break-before: always;
+  }
+  /* Page setup — landscape works better for tables */
+  @page {
+    size: letter portrait;
+    margin: 0.5in;
+  }
+}
+
+/* Phase 3o.89 micro-polish — mobile-responsive utilities.
+   Single-file SPAs are typically desktop-first; this block adds
+   narrow-viewport rules for the surfaces most visible on mobile:
+   the TopNav (logo / value tile / account menu), the StatusBar
+   (connection dots / tick age / time), and the BottomPanel tab
+   strip (47 tabs that need to scroll on phones).
+   
+   Approach: mark specific elements with imo-mobile-* utility
+   classes and let media queries adjust them. Keeps the JSX free
+   of breakpoint clutter and lets us tune the breakpoints from
+   one place. */
+
+/* Hide on narrow viewports (< 640px / Tailwind 'sm'). Used for the
+   value-breakdown tile and other secondary chrome that doesn't fit
+   on a phone. */
+@media (max-width: 640px) {
+  .imo-mobile-hide {
+    display: none !important;
+  }
+  /* Tighten TopNav padding on narrow viewports — matches the
+     proportional shrink of the rest of the chrome. */
+  .imo-mobile-compact {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    height: 48px !important;
+  }
+  /* StatusBar gets smaller text + condensed gap so the dots /
+     tick / clock fit without wrapping on a phone. */
+  .imo-mobile-statusbar {
+    gap: 0.375rem !important;
+    font-size: 9px !important;
+  }
+  .imo-mobile-statusbar .imo-mobile-hide-md {
+    display: none !important;
+  }
+  /* BottomPanel tab strip — pad less and give each tab a hint of
+     touch-friendly height while still allowing scroll. */
+  .imo-mobile-tabstrip > button {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 0.625rem !important;
+    padding-bottom: 0.625rem !important;
+    font-size: 12px !important;
+  }
+  /* Modal sizing for mobile — bring max-width down so the dialog
+     feels bounded rather than nearly full-bleed. */
+  .imo-mobile-modal {
+    max-width: 92vw !important;
+    margin-left: 4vw !important;
+    margin-right: 4vw !important;
+  }
+}
+
+/* Slightly larger tap targets on touch devices regardless of width.
+   Touch hover doesn't trigger CSS :hover reliably so we don't need
+   to think about hover states here. */
+@media (hover: none) and (pointer: coarse) {
+  .imo-touch-tap {
+    min-height: 36px;
+  }
+}

@@ -1,0 +1,102 @@
+openapi: 3.0.3
+info:
+  title: Onyx Strategy Executor
+  version: 0.1.0
+servers:
+  - url: http://localhost:8002
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  schemas:
+    Strategy:
+      type: object
+      required: [name, symbol, interval, entry_rules]
+      properties:
+        id:           { type: integer, readOnly: true }
+        user_id:      { type: string }
+        name:         { type: string, example: "VWAP+RSI(3) scalping" }
+        symbol:       { type: string, example: "BTC" }
+        interval:     { type: string, enum: [1m, 5m, 15m, 1h, 1d] }
+        side:         { type: string, enum: [long, short], default: long }
+        entry_rules:
+          type: array
+          items:
+            type: object
+            required: [name, expr]
+            properties:
+              name: { type: string, example: "Price above VWAP" }
+              expr: { type: string, example: "price > vwap" }
+        exit_rules:   { type: array }
+        risk_rules:   { type: object }
+        auto_execute: { type: boolean, default: false }
+        enabled:      { type: boolean, default: true }
+    SafetyCondition:
+      type: object
+      properties:
+        name:        { type: string }
+        expr:        { type: string }
+        passed:      { type: boolean }
+        actualValue: {}
+        error:       { type: string, nullable: true }
+    SafetyResult:
+      type: object
+      properties:
+        passed:     { type: boolean }
+        blocker:    { type: string, nullable: true }
+        conditions: { type: array, items: { $ref: "#/components/schemas/SafetyCondition" } }
+paths:
+  /health: { get: { security: [], responses: { "200": { description: OK } } } }
+  /strategies:
+    get:
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: user_id, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+    post:
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/Strategy" } }
+      responses: { "200": { description: Created } }
+  /strategies/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    patch: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+    delete: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /strategies/{id}/safety-check:
+    post:
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200":
+          description: Safety check result
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/SafetyResult" } }
+  /strategies/{id}/run:
+    post:
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Run result } }
+  /strategies/{id}/enable-auto:
+    post:
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: OK } }
+  /runs:
+    get: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /trades:
+    get: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /trades.csv:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: CSV download
+          content: { text/csv: { schema: { type: string } } }
+  /positions:
+    get: { security: [{ bearerAuth: [] }], responses: { "200": { description: OK } } }
+  /ws/events:
+    get:
+      summary: WebSocket — fill/signal/rejection events (auth via ?token=)
+      security: []
+      responses:
+        "101": { description: Switching protocols }

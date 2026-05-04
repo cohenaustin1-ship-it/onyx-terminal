@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* Phase 3p.37 — whole-project sweep config.
+     *
+     * Same as tsconfig.json but with `checkJs: true`, which forces
+     * TypeScript to type-check EVERY .js/.jsx file in the project,
+     * not just files with an explicit `// @ts-check` pragma.
+     *
+     * This is the config the 3p.36 + 3p.37 work used to surface
+     * ~80 latent missing-import / missing-export bugs across the
+     * entire codebase. As of the end of 3p.37, this sweep passes
+     * cleanly with 0 "Cannot find name" errors.
+     *
+     * Run with: `npm run typecheck:sweep`
+     *
+     * Use this in CI as the gate for "did anyone re-introduce the
+     * extraction-fragility bug class?". The default tsconfig.json
+     * (with checkJs:false) is for fast iteration during development;
+     * this one is for the full audit.
+     *
+     * Inference-level errors (types of objects mutated across calls,
+     * narrowing of `unknown` in catch clauses, etc.) are not the
+     * focus — the focus is missing references. Future tightening
+     * could opt in more strictness here.
+     */
+    "checkJs": true
+  }
+}

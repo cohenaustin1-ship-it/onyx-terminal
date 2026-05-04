@@ -1,0 +1,114 @@
+bind = "0.0.0.0:9443"
+tls_cert = "/etc/jpm-onyx/certs/sequencer.crt"
+tls_key = "/etc/jpm-onyx/certs/sequencer.key"
+ring_capacity = 65536   # must be power of 2
+
+# -----------------------------------------------------------------------------
+# Instruments — each pinned to its own core, one Chainweb chain per id
+# -----------------------------------------------------------------------------
+[[instruments]]
+id = "BTC-PERP"
+class = "crypto"
+chain_id = 3
+tick_size = 0.5
+lot_size = 0.001
+max_leverage = 20
+cpu_pin = 4
+
+[[instruments]]
+id = "ETH-PERP"
+class = "crypto"
+chain_id = 4
+tick_size = 0.25
+lot_size = 0.01
+max_leverage = 20
+cpu_pin = 5
+
+[[instruments]]
+id = "SOL-PERP"
+class = "crypto"
+chain_id = 5
+tick_size = 0.05
+lot_size = 0.1
+max_leverage = 10
+cpu_pin = 6
+
+[[instruments]]
+id = "WTI-F26"
+class = "energy"
+chain_id = 10
+tick_size = 0.01
+lot_size = 1
+max_leverage = 50
+cpu_pin = 8
+
+[[instruments]]
+id = "BRENT-F26"
+class = "energy"
+chain_id = 10
+tick_size = 0.01
+lot_size = 1
+max_leverage = 50
+cpu_pin = 9
+
+[[instruments]]
+id = "NG-G26"
+class = "energy"
+chain_id = 11
+tick_size = 0.001
+lot_size = 1
+max_leverage = 25
+cpu_pin = 10
+
+[[instruments]]
+id = "HO-F26"
+class = "energy"
+chain_id = 12
+tick_size = 0.0001
+lot_size = 1
+max_leverage = 25
+cpu_pin = 11
+
+# -----------------------------------------------------------------------------
+# Chainweb cluster (JPM-operated validators)
+# -----------------------------------------------------------------------------
+[chainweb]
+nodes = [
+    "https://ny4-val-01.onyx.jpmorgan.com:1848",
+    "https://ny4-val-02.onyx.jpmorgan.com:1848",
+    "https://ld4-val-01.onyx.jpmorgan.com:1848",
+]
+network_id = "jpm-onyx-mainnet"
+submit_timeout = 500    # ms
+batch_size = 500        # events per Pact submission
+batch_window = 50       # ms — sequencer batches orders every 50ms into one submission
+
+# -----------------------------------------------------------------------------
+# HotStuff BFT consensus
+# -----------------------------------------------------------------------------
+[consensus]
+validator_endpoints = [
+    "tcp://ny4-val-01.onyx.jpmorgan.com:30303",
+    "tcp://ny4-val-02.onyx.jpmorgan.com:30303",
+    # ... 21 total, 14 in NY4, 4 in LD4, 3 in TY3
+]
+expected_validators = 21
+quorum_threshold = 14   # 2f+1 where f=6 (tolerates 6 byzantine nodes)
+pipeline_depth = 3      # pipelined HotStuff — 3 phases in flight
+
+# -----------------------------------------------------------------------------
+# Market data feeds
+# -----------------------------------------------------------------------------
+[marketdata]
+ice_endpoint = "https://webice.theice.com"      # JPM's ICE data services endpoint
+cme_endpoint = "https://datamine.cmegroup.com"  # CME DataMine / Market Data Platform
+eia_api_key  = "${EIA_API_KEY}"                 # free, https://www.eia.gov/opendata/register.php
+fallback = "simulated"                           # "simulated" | "none"
+
+# -----------------------------------------------------------------------------
+# Compliance service
+# -----------------------------------------------------------------------------
+[compliance]
+lei_cache_ttl = 2              # seconds — how often to refresh LEI whitelist from chain
+prevalidate_url = "https://compliance-svc.onyx.jpmorgan.com/v1/prevalidate"
+surveillance_url = "https://surveillance-svc.onyx.jpmorgan.com/v1/flag"

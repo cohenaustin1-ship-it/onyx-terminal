@@ -1,0 +1,60 @@
+{
+  "name": "jpm-onyx-terminal",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "JPM Onyx Terminal \u2014 Hyperliquid-style derivatives trading on permissioned Kadena Chainweb",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "typecheck": "tsc --noEmit",
+    "typecheck:sweep": "tsc -p tsconfig.sweep.json --noEmit",
+    "check:imports": "node scripts/check-imports.cjs",
+    "precommit": "npm run typecheck && npm test",
+    "cap:init": "npx cap init",
+    "cap:add:ios": "npx cap add ios",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "vite build && npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/cli": "^7.6.2",
+    "@capacitor/core": "^7.6.2",
+    "@capacitor/preferences": "^7.0.4",
+    "@capacitor/share": "^7.0.4",
+    "@capacitor/splash-screen": "^7.0.5",
+    "@capacitor/status-bar": "^7.0.6",
+    "@monaco-editor/react": "^4.6.0",
+    "lucide-react": "^0.383.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7",
+    "streamdown": "^2.5.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/ui": "^4.1.5",
+    "autoprefixer": "^10.4.19",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^6.0.3",
+    "vite": "^5.3.1",
+    "vitest": "^4.1.5"
+  }
+}

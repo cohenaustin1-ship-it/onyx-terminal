@@ -1,0 +1,63 @@
+name: ci
+
+# Run on every PR to main and every push to main. Three jobs in
+# parallel — typecheck, tests, build — so a regression in any one
+# of them blocks merges.
+#
+# Phase 3p.37: added after the whole-project TypeScript sweep
+# completed (~95 latent bugs found and fixed across 3p.34-3p.37).
+# The check:imports gate is the safety net that prevents the same
+# bug class from re-emerging.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  typecheck:
+    name: typecheck (default + missing-ref gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      # Default tsconfig: only files with `// @ts-check` opt in.
+      # As of 3p.37, 10 files type-check clean here.
+      - name: tsc --noEmit (default config)
+        run: npm run typecheck
+
+      # Whole-project sweep, gated only on missing-reference bugs.
+      # As of 3p.37, this reports 0 errors.
+      # Failure = somebody extracted code without re-threading imports.
+      - name: missing-reference gate (TS2304)
+        run: npm run check:imports
+
+  tests:
+    name: vitest (718 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+
+  build:
+    name: vite build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build

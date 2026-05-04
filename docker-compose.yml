@@ -1,0 +1,73 @@
+version: "3.9"
+
+# ─── Onyx Terminal — full backend stack ──────────────────────────────────
+# Brings up Postgres + the three backend services with one command.
+# The SPA itself runs separately via `npm run dev` from project root.
+#
+# Usage:
+#   docker compose up                    # all three + postgres
+#   docker compose up tick-ingestion     # just one
+#   docker compose down -v               # tear down + drop volumes
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: onyx
+      POSTGRES_PASSWORD: onyx
+      POSTGRES_DB: onyx_executor
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onyx"]
+      interval: 5s
+      retries: 5
+
+  tick-ingestion:
+    build: ./services/tick-ingestion
+    env_file: ./services/tick-ingestion/.env
+    environment:
+      DB_PATH: /app/data/onyx_ticks.duckdb
+      PORT: "8001"
+    ports: ["8001:8001"]
+    volumes: ["tickdata:/app/data"]
+    restart: unless-stopped
+
+  executor:
+    build: ./services/executor
+    env_file: ./services/executor/.env
+    environment:
+      DATABASE_URL: postgres://onyx:onyx@postgres:5432/onyx_executor
+      TICK_API_URL: http://tick-ingestion:8001
+      PORT: "8002"
+      TRADES_CSV_PATH: /app/data/trades.csv
+    ports: ["8002:8002"]
+    volumes: ["execdata:/app/data"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      tick-ingestion:
+        condition: service_started
+    restart: unless-stopped
+
+  agent:
+    build: ./services/agent
+    env_file: ./services/agent/.env
+    environment:
+      TICK_API_URL: http://tick-ingestion:8001
+      EXECUTOR_API_URL: http://executor:8002
+      EXECUTOR_WS_URL: ws://executor:8002/ws/events
+      MEMORY_PATH: /app/data/agent_memory.json
+      PORT: "7777"
+    ports: ["7777:7777"]
+    volumes: ["agentdata:/app/data"]
+    depends_on:
+      - executor
+      - tick-ingestion
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  tickdata:
+  execdata:
+  agentdata:
